@@ -1,0 +1,13 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Attendance Tracker",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Attendance Tracker",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "id": "attendancetrackerr",
+  "description": "This is that tracks your attendance"
+}

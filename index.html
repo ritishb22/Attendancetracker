@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Class Attendance Tracker</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --surface: #ffffff;
+      --surface-subtle: #fbfdff;
+      --input-bg: #ffffff;
+      --border: #e2e8f0;
+      --track-bg: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-soft: #eff6ff;
+      --ok: #15803d;
+      --ok-soft: #f0fdf4;
+      --ok-border: #bbf7d0;
+      --danger: #dc2626;
+      --danger-soft: #fef2f2;
+      --danger-border: #fecaca;
+      --radius: 14px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0b1120;
+      --surface: #111827;
+      --surface-subtle: #182235;
+      --input-bg: #0f172a;
+      --border: #263248;
+      --track-bg: #263248;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-soft: rgba(59, 130, 246, 0.16);
+      --ok: #4ade80;
+      --ok-soft: rgba(34, 197, 94, 0.14);
+      --ok-border: rgba(74, 222, 128, 0.35);
+      --danger: #f87171;
+      --danger-soft: rgba(239, 68, 68, 0.16);
+      --danger-border: rgba(248, 113, 113, 0.35);
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 24px 16px 48px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 640px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    h1 {
+      font-size: 1.65rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .stat-label {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .stat-unit {
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--muted);
+      margin-left: 4px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 0.84rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+    }
+
+    .error-msg {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: var(--danger);
+      background: var(--danger-soft);
+      padding: 8px 12px;
+      border-radius: 8px;
+      display: none;
+    }
+
+    .error-msg.visible {
+      display: block;
+    }
+
+    .submit-btn {
+      margin-top: 14px;
+      width: 100%;
+      padding: 11px 16px;
+      border: none;
+      border-radius: 10px;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.08s ease;
+    }
+
+    .submit-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .submit-btn:active {
+      transform: scale(0.99);
+    }
+
+    .list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .list-header .card-title {
+      margin-bottom: 0;
+    }
+
+    .entry-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .entry-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-subtle);
+    }
+
+    .entry-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .entry-subject {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .entry-date {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .entry-note {
+      margin-top: 2px;
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-style: italic;
+      word-break: break-word;
+    }
+
+    .entry-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .hours-pill {
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 600;
+      font-size: 0.85rem;
+      white-space: nowrap;
+    }
+
+    .remove-btn,
+    .edit-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .edit-btn:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .remove-btn:hover {
+      color: var(--danger);
+      border-color: var(--danger-border);
+      background: var(--danger-soft);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 28px 16px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .save-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--ok);
+      background: var(--ok-soft);
+      border: 1px solid var(--ok-border);
+      padding: 4px 10px;
+      border-radius: 999px;
+    }
+
+    .save-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22c55e;
+    }
+
+    .subject-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .subject-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .subject-row-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.92rem;
+    }
+
+    .subject-name {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .subject-meta {
+      font-size: 0.84rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .subject-meta strong {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 8px;
+      background: var(--track-bg);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 999px;
+      transition: width 0.25s ease;
+    }
+
+    .clear-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ghost-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .ghost-btn:hover {
+      color: var(--danger);
+      border-color: var(--danger-border);
+      background: var(--danger-soft);
+    }
+
+    .confirm-btn {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 8px;
+      background: var(--danger);
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .confirm-btn:hover {
+      background: #b91c1c;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .stat-sub {
+      margin-top: 4px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .stat-sub.ok {
+      color: #15803d;
+      font-weight: 500;
+    }
+
+    .stat-sub.warn {
+      color: var(--danger);
+      font-weight: 500;
+    }
+
+    .goal-input-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .goal-input {
+      width: 72px;
+      padding: 4px 8px;
+      font-size: 1.35rem;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 8px;
+    }
+
+    .status-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .status-btn {
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--input-bg);
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .status-btn.active-attended {
+      background: var(--ok-soft);
+      border-color: var(--ok-border);
+      color: var(--ok);
+    }
+
+    .status-btn.active-missed {
+      background: var(--danger-soft);
+      border-color: var(--danger-border);
+      color: var(--danger);
+    }
+
+    .hours-pill.missed {
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    .bar-fill.ok {
+      background: #16a34a;
+    }
+
+    .bar-fill.warn {
+      background: #dc2626;
+    }
+
+    .subject-pct.ok {
+      color: #15803d;
+      font-weight: 600;
+    }
+
+    .subject-pct.warn {
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .subject-helper {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .subject-helper.ok {
+      color: #15803d;
+    }
+
+    .subject-helper.warn {
+      color: var(--danger);
+    }
+
+    .log-toolbar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .filter-select {
+      width: auto;
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--input-bg);
+      color: var(--text);
+      font-size: 0.82rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .export-btn {
+      padding: 6px 10px;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .export-btn:hover {
+      opacity: 0.9;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .theme-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.78rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .theme-btn:hover {
+      border-color: var(--primary);
+    }
+
+    .date-shortcuts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .date-chip {
+      padding: 4px 9px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-subtle);
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .date-chip:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .entry-item.editing {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      border-color: var(--primary);
+    }
+
+    .edit-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .edit-grid input,
+    .edit-grid select {
+      padding: 7px 10px;
+      font-size: 0.86rem;
+    }
+
+    .edit-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .edit-field label {
+      font-size: 0.74rem;
+      color: var(--muted);
+    }
+
+    .edit-field.full {
+      grid-column: 1 / -1;
+    }
+
+    .edit-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .edit-error {
+      font-size: 0.8rem;
+      color: var(--danger);
+    }
+
+    .edit-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .save-edit-btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .save-edit-btn:hover {
+      background: var(--primary-hover);
+    }
+
+    .period-toggle {
+      display: inline-flex;
+      padding: 3px;
+      border-radius: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      gap: 4px;
+    }
+
+    .period-btn {
+      padding: 5px 11px;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background-color 0.15s ease, color 0.15s ease;
+    }
+
+    .period-btn.active {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+
+    .log-header-right {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .import-btn {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .import-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .import-feedback {
+      margin-bottom: 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      font-weight: 500;
+    }
+
+    .import-feedback.ok {
+      background: var(--ok-soft);
+      color: var(--ok);
+      border: 1px solid var(--ok-border);
+    }
+
+    .import-feedback.warn {
+      background: var(--danger-soft);
+      color: var(--danger);
+      border: 1px solid var(--danger-border);
+    }
+
+    .subject-input-row {
+      display: flex;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .subject-input-row input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .save-subject-btn {
+      padding: 0 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-subtle);
+      color: var(--text);
+      font-size: 0.84rem;
+      font-weight: 600;
+      font-family: inherit;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .save-subject-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .saved-subjects-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .saved-subjects-hint {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .subject-chip {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-subtle);
+      overflow: hidden;
+      transition: border-color 0.15s ease, background-color 0.15s ease;
+    }
+
+    .subject-chip.active {
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+
+    .subject-chip-pick {
+      padding: 5px 10px;
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.8rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .subject-chip.active .subject-chip-pick {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .subject-chip-remove {
+      padding: 5px 8px 5px 2px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.82rem;
+      line-height: 1;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .subject-chip-remove:hover {
+      color: var(--danger);
+    }
+
+    @media (max-width: 480px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .entry-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .entry-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <div class="header-top">
+        <span class="badge">Version 9 &middot; Notes Per Class</span>
+        <div class="header-actions">
+          <span id="save-status" class="save-pill">
+            <span class="save-dot"></span>
+            <span id="save-status-text">Saved in browser</span>
+          </span>
+          <button type="button" id="theme-toggle-btn" class="theme-btn" aria-label="Toggle dark mode">
+            Dark Mode
+          </button>
+        </div>
+      </div>
+      <h1>Class Attendance Tracker</h1>
+      <p class="subtitle">Log today's or past classes, edit any date or entry inline, track your goals, and export to CSV.</p>
+    </header>
+
+    <!-- Summary Cards -->
+    <section class="summary-grid" aria-label="Attendance summary">
+      <div class="stat-card">
+        <div class="stat-label">Hours Attended</div>
+        <div class="stat-value">
+          <span id="total-hours">0</span><span class="stat-unit">hrs</span>
+        </div>
+        <div class="stat-sub"><span id="total-sessions">0</span> sessions logged</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Attendance Rate</div>
+        <div class="stat-value">
+          <span id="attendance-rate">&mdash;</span>
+        </div>
+        <div id="rate-status" class="stat-sub">Log a class to calculate</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Target Goal</div>
+        <div class="goal-input-wrap">
+          <input
+            id="goal-input"
+            class="goal-input"
+            type="number"
+            min="1"
+            max="100"
+            step="1"
+            value="75"
+            aria-label="Target attendance percentage"
+          />
+          <span class="stat-unit">%</span>
+        </div>
+        <div class="stat-sub">Minimum required</div>
+      </div>
+    </section>
+
+    <!-- Entry Form -->
+    <section class="card" aria-label="Log attendance">
+      <h2 class="card-title">Log a Class</h2>
+      <form id="attendance-form" novalidate>
+        <div class="form-grid">
+          <div class="field full">
+            <label for="subject-input">Class or Subject</label>
+            <div class="subject-input-row">
+              <input
+                id="subject-input"
+                type="text"
+                placeholder="e.g., Mathematics, Physics Lab"
+                autocomplete="off"
+                required
+              />
+              <button type="button" id="save-subject-btn" class="save-subject-btn">+ Save</button>
+            </div>
+            <div id="saved-subjects-wrap" class="saved-subjects-wrap" aria-label="Saved subjects"></div>
+          </div>
+          <div class="field full">
+            <label>Status</label>
+            <div class="status-toggle" role="group" aria-label="Attendance status">
+              <button type="button" id="status-attended-btn" class="status-btn active-attended" aria-pressed="true">
+                Attended
+              </button>
+              <button type="button" id="status-missed-btn" class="status-btn" aria-pressed="false">
+                Missed
+              </button>
+            </div>
+          </div>
+          <div class="field">
+            <label for="hours-input">Class Hours</label>
+            <input
+              id="hours-input"
+              type="number"
+              min="0.25"
+              max="24"
+              step="0.25"
+              placeholder="e.g., 1.5"
+              required
+            />
+          </div>
+          <div class="field">
+            <label for="date-input">Date (today or any past date)</label>
+            <input id="date-input" type="date" required />
+          </div>
+          <div class="field full">
+            <div class="date-shortcuts" role="group" aria-label="Quick date presets">
+              <button type="button" class="date-chip" data-days-ago="0">Today</button>
+              <button type="button" class="date-chip" data-days-ago="1">Yesterday</button>
+              <button type="button" class="date-chip" data-days-ago="7">1 week ago</button>
+              <button type="button" class="date-chip" data-days-ago="30">1 month ago</button>
+            </div>
+          </div>
+          <div class="field full">
+            <label for="note-input">Note (optional)</label>
+            <input
+              id="note-input"
+              type="text"
+              maxlength="140"
+              placeholder="e.g., Extra lab session, missed due to illness"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <p id="form-error" class="error-msg" role="alert"></p>
+
+        <button type="submit" class="submit-btn">Add Attendance Entry</button>
+      </form>
+    </section>
+
+    <!-- Subject Breakdown -->
+    <section class="card" aria-label="Hours by subject">
+      <div class="list-header">
+        <h2 class="card-title">Hours by Subject</h2>
+      </div>
+      <div id="subject-list" class="subject-list"></div>
+      <div id="subject-empty" class="empty-state">
+        Your per-subject totals will appear here once you log a class.
+      </div>
+    </section>
+
+    <!-- Weekly / Monthly Summary -->
+    <section class="card" aria-label="Weekly and monthly summary">
+      <div class="list-header" style="flex-wrap: wrap; gap: 10px;">
+        <h2 class="card-title">Timeline Summary</h2>
+        <div class="period-toggle" role="group" aria-label="Summary period">
+          <button type="button" id="period-week-btn" class="period-btn active" aria-pressed="true">By Week</button>
+          <button type="button" id="period-month-btn" class="period-btn" aria-pressed="false">By Month</button>
+        </div>
+      </div>
+      <div id="period-list" class="subject-list"></div>
+      <div id="period-empty" class="empty-state">
+        Your weekly and monthly summaries will appear here once you log a class.
+      </div>
+    </section>
+
+    <!-- Attendance Log -->
+    <section class="card" aria-label="Attendance history">
+      <div class="list-header" style="flex-wrap: wrap; gap: 10px;">
+        <h2 class="card-title">Attendance Log</h2>
+        <div class="log-header-right">
+          <input type="file" id="import-csv-input" accept=".csv,text/csv" class="hidden" />
+          <button type="button" id="import-csv-btn" class="import-btn">Import CSV</button>
+          <div id="log-toolbar" class="log-toolbar hidden">
+            <select id="subject-filter" class="filter-select" aria-label="Filter log by subject">
+              <option value="all">All Subjects</option>
+            </select>
+            <button type="button" id="export-csv-btn" class="export-btn">Export CSV</button>
+            <div id="clear-controls" class="clear-controls hidden">
+              <button type="button" id="clear-all-btn" class="ghost-btn">Clear All</button>
+              <button type="button" id="confirm-clear-btn" class="confirm-btn hidden">Confirm Clear</button>
+              <button type="button" id="cancel-clear-btn" class="ghost-btn hidden">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="import-feedback" class="import-feedback hidden" role="status"></div>
+      <ul id="entry-list" class="entry-list"></ul>
+      <div id="empty-state" class="empty-state">
+        No classes logged yet. Add your first class above to see it appear here.
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // 1. STORAGE & STATE: Load saved entries and target goal from localStorage.
+    const STORAGE_KEY = "attendance_tracker_entries_v2";
+    const GOAL_KEY = "attendance_tracker_goal_v3";
+    const THEME_KEY = "attendance_tracker_theme_v5";
+    const SUBJECTS_KEY = "attendance_tracker_subjects_v8";
+    let entries = [];
+    let savedSubjects = [];
+    let nextId = 1;
+    let selectedStatus = "attended";
+    let selectedFilter = "all";
+    let summaryPeriod = "week";
+    let editingId = null;
+    let targetPercent = 75;
+    let currentTheme = "light";
+    let storageAvailable = true;
+
+    function loadEntries() {
+      try {
+        const raw = window.localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            entries = parsed
+              .filter(
+                (item) =>
+                  item &&
+                  typeof item.subject === "string" &&
+                  typeof item.hours === "number" &&
+                  !Number.isNaN(item.hours) &&
+                  typeof item.date === "string"
+              )
+              .map((item) => ({
+                ...item,
+                status: item.status === "missed" ? "missed" : "attended",
+                note: typeof item.note === "string" ? item.note.trim() : ""
+              }));
+            const maxId = entries.reduce((max, item) => Math.max(max, Number(item.id) || 0), 0);
+            nextId = maxId + 1;
+          }
+        }
+        const savedGoal = Number(window.localStorage.getItem(GOAL_KEY));
+        if (!Number.isNaN(savedGoal) && savedGoal >= 1 && savedGoal <= 100) {
+          targetPercent = Math.round(savedGoal);
+        }
+        const savedTheme = window.localStorage.getItem(THEME_KEY);
+        if (savedTheme === "dark" || savedTheme === "light") {
+          currentTheme = savedTheme;
+        }
+        const rawSubjects = window.localStorage.getItem(SUBJECTS_KEY);
+        if (rawSubjects) {
+          const parsedSubjects = JSON.parse(rawSubjects);
+          if (Array.isArray(parsedSubjects)) {
+            savedSubjects = parsedSubjects
+              .filter((s) => typeof s === "string" && s.trim().length > 0)
+              .map((s) => s.trim());
+          }
+        }
+        // Seed saved subjects from any existing logged entries if none saved yet
+        if (savedSubjects.length === 0 && entries.length > 0) {
+          const seen = new Set();
+          for (const entry of entries) {
+            const key = entry.subject.trim().toLowerCase();
+            if (!seen.has(key)) {
+              seen.add(key);
+              savedSubjects.push(entry.subject.trim());
+            }
+          }
+        }
+      } catch (err) {
+        storageAvailable = false;
+      }
+    }
+
+    function saveEntries() {
+      if (!storageAvailable) return;
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      } catch (err) {
+        storageAvailable = false;
+      }
+      updateSaveStatus();
+    }
+
+    function saveGoal() {
+      if (!storageAvailable) return;
+      try {
+        window.localStorage.setItem(GOAL_KEY, String(targetPercent));
+      } catch (err) {
+        storageAvailable = false;
+      }
+    }
+
+    function saveSubjects() {
+      if (!storageAvailable) return;
+      try {
+        window.localStorage.setItem(SUBJECTS_KEY, JSON.stringify(savedSubjects));
+      } catch (err) {
+        storageAvailable = false;
+      }
+    }
+
+    function addSavedSubject(name) {
+      const cleaned = name.trim();
+      if (!cleaned) return false;
+      const exists = savedSubjects.some((s) => s.toLowerCase() === cleaned.toLowerCase());
+      if (exists) return false;
+      savedSubjects.push(cleaned);
+      saveSubjects();
+      return true;
+    }
+
+    function applyTheme(theme) {
+      currentTheme = theme === "dark" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", currentTheme);
+      themeToggleBtn.textContent = currentTheme === "dark" ? "Light Mode" : "Dark Mode";
+      if (storageAvailable) {
+        try {
+          window.localStorage.setItem(THEME_KEY, currentTheme);
+        } catch (err) {
+          storageAvailable = false;
+        }
+      }
+    }
+
+    // 2. ELEMENTS: Grab references to the HTML elements we need to read or update.
+    const form = document.getElementById("attendance-form");
+    const subjectInput = document.getElementById("subject-input");
+    const saveSubjectBtn = document.getElementById("save-subject-btn");
+    const savedSubjectsWrap = document.getElementById("saved-subjects-wrap");
+    const hoursInput = document.getElementById("hours-input");
+    const dateInput = document.getElementById("date-input");
+    const noteInput = document.getElementById("note-input");
+    const formError = document.getElementById("form-error");
+    const totalHoursEl = document.getElementById("total-hours");
+    const totalSessionsEl = document.getElementById("total-sessions");
+    const attendanceRateEl = document.getElementById("attendance-rate");
+    const rateStatusEl = document.getElementById("rate-status");
+    const goalInput = document.getElementById("goal-input");
+    const statusAttendedBtn = document.getElementById("status-attended-btn");
+    const statusMissedBtn = document.getElementById("status-missed-btn");
+    const subjectListEl = document.getElementById("subject-list");
+    const subjectEmptyEl = document.getElementById("subject-empty");
+    const periodListEl = document.getElementById("period-list");
+    const periodEmptyEl = document.getElementById("period-empty");
+    const periodWeekBtn = document.getElementById("period-week-btn");
+    const periodMonthBtn = document.getElementById("period-month-btn");
+    const entryListEl = document.getElementById("entry-list");
+    const emptyStateEl = document.getElementById("empty-state");
+    const saveStatusTextEl = document.getElementById("save-status-text");
+    const themeToggleBtn = document.getElementById("theme-toggle-btn");
+    const dateShortcutButtons = document.querySelectorAll(".date-chip");
+    const logToolbarEl = document.getElementById("log-toolbar");
+    const subjectFilterEl = document.getElementById("subject-filter");
+    const exportCsvBtn = document.getElementById("export-csv-btn");
+    const importCsvBtn = document.getElementById("import-csv-btn");
+    const importCsvInput = document.getElementById("import-csv-input");
+    const importFeedbackEl = document.getElementById("import-feedback");
+    const clearControlsEl = document.getElementById("clear-controls");
+    const clearAllBtn = document.getElementById("clear-all-btn");
+    const confirmClearBtn = document.getElementById("confirm-clear-btn");
+    const cancelClearBtn = document.getElementById("cancel-clear-btn");
+
+    function updateSaveStatus() {
+      saveStatusTextEl.textContent = storageAvailable
+        ? "Saved in browser"
+        : "Session only (storage restricted)";
+    }
+
+    // Format a Date offset (e.g., 0 = today, 30 = 1 month ago) as YYYY-MM-DD.
+    function getDateStringDaysAgo(daysAgo) {
+      const target = new Date();
+      target.setDate(target.getDate() - daysAgo);
+      const year = target.getFullYear();
+      const month = String(target.getMonth() + 1).padStart(2, "0");
+      const day = String(target.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function getTodayDateString() {
+      return getDateStringDaysAgo(0);
+    }
+
+    dateInput.value = getTodayDateString();
+
+    // Format hours cleanly (e.g., 2 instead of 2.00, 1.5 instead of 1.50).
+    function formatHours(value) {
+      return Number(value.toFixed(2)).toString();
+    }
+
+    // Format YYYY-MM-DD into a readable date like "Nov 27, 2026".
+    function formatDate(dateString) {
+      const parts = dateString.split("-");
+      if (parts.length !== 3) return dateString;
+      const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      if (Number.isNaN(dateObj.getTime())) return dateString;
+      return dateObj.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      });
+    }
+
+    // Safely display user-typed text so special characters don't break HTML.
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function showError(message) {
+      formError.textContent = message;
+      formError.classList.add("visible");
+    }
+
+    function clearError() {
+      formError.textContent = "";
+      formError.classList.remove("visible");
+    }
+
+    // Group entries by subject (case-insensitive) and track attended vs. total hours.
+    function getSubjectTotals() {
+      const grouped = new Map();
+      for (const entry of entries) {
+        const key = entry.subject.trim().toLowerCase();
+        if (!grouped.has(key)) {
+          grouped.set(key, {
+            name: entry.subject.trim(),
+            attendedHours: 0,
+            totalHours: 0,
+            sessions: 0
+          });
+        }
+        const record = grouped.get(key);
+        record.totalHours += entry.hours;
+        if (entry.status !== "missed") {
+          record.attendedHours += entry.hours;
+        }
+        record.sessions += 1;
+      }
+      return Array.from(grouped.values()).sort((a, b) => b.totalHours - a.totalHours);
+    }
+
+    function parseLocalDate(dateString) {
+      const parts = dateString.split("-");
+      if (parts.length !== 3) return null;
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    function toIsoDate(dateObj) {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const d = String(dateObj.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    // Group entries by Monday-Sunday week or by calendar month (newest period first).
+    function getPeriodTotals(period) {
+      const grouped = new Map();
+      for (const entry of entries) {
+        const d = parseLocalDate(entry.date);
+        if (!d) continue;
+
+        let key = "";
+        let label = "";
+
+        if (period === "month") {
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, "0");
+          key = `${y}-${m}`;
+          label = d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+        } else {
+          const dayOfWeek = (d.getDay() + 6) % 7; // 0 = Monday, 6 = Sunday
+          const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dayOfWeek);
+          const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+          key = toIsoDate(monday);
+          const startLabel = monday.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+          const endLabel =
+            monday.getMonth() === sunday.getMonth()
+              ? `${sunday.getDate()}, ${sunday.getFullYear()}`
+              : sunday.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+          label = `${startLabel} – ${endLabel}`;
+        }
+
+        if (!grouped.has(key)) {
+          grouped.set(key, {
+            key: key,
+            label: label,
+            attendedHours: 0,
+            totalHours: 0,
+            sessions: 0
+          });
+        }
+        const record = grouped.get(key);
+        record.totalHours += entry.hours;
+        if (entry.status !== "missed") {
+          record.attendedHours += entry.hours;
+        }
+        record.sessions += 1;
+      }
+
+      return Array.from(grouped.values()).sort((a, b) => b.key.localeCompare(a.key));
+    }
+
+    function setSummaryPeriod(period) {
+      summaryPeriod = period === "month" ? "month" : "week";
+      const isWeek = summaryPeriod === "week";
+      periodWeekBtn.classList.toggle("active", isWeek);
+      periodWeekBtn.setAttribute("aria-pressed", String(isWeek));
+      periodMonthBtn.classList.toggle("active", !isWeek);
+      periodMonthBtn.setAttribute("aria-pressed", String(!isWeek));
+      render();
+    }
+
+    function setSelectedStatus(status) {
+      selectedStatus = status;
+      const isAttended = status === "attended";
+      statusAttendedBtn.classList.toggle("active-attended", isAttended);
+      statusAttendedBtn.setAttribute("aria-pressed", String(isAttended));
+      statusMissedBtn.classList.toggle("active-missed", !isAttended);
+      statusMissedBtn.setAttribute("aria-pressed", String(!isAttended));
+    }
+
+    function resetClearConfirmation() {
+      clearAllBtn.classList.remove("hidden");
+      confirmClearBtn.classList.add("hidden");
+      cancelClearBtn.classList.add("hidden");
+    }
+
+    // Calculate how many hours can be missed safely or must be attended to reach targetPercent.
+    function getGoalGuidance(attendedHours, totalHours) {
+      if (totalHours === 0) {
+        return { text: "Log a class to calculate", tone: "" };
+      }
+      const goal = targetPercent / 100;
+      const ratio = attendedHours / totalHours;
+
+      if (goal >= 1) {
+        if (attendedHours >= totalHours) {
+          return { text: "100% goal — cannot miss hours", tone: "ok" };
+        }
+        return { text: "100% goal cannot be reached after a miss", tone: "warn" };
+      }
+
+      if (ratio >= goal) {
+        const rawSafe = attendedHours / goal - totalHours;
+        const safeHrs = Math.max(0, Math.floor(rawSafe * 4 + 1e-9) / 4);
+        if (safeHrs >= 0.25) {
+          const unit = safeHrs === 1 ? "hr" : "hrs";
+          return { text: `Can miss up to ${formatHours(safeHrs)} ${unit}`, tone: "ok" };
+        }
+        return { text: "On target — attend next class", tone: "ok" };
+      }
+
+      const rawNeeded = (goal * totalHours - attendedHours) / (1 - goal);
+      const neededHrs = Math.max(0.25, Math.ceil(rawNeeded * 4 - 1e-9) / 4);
+      const unit = neededHrs === 1 ? "hr" : "hrs";
+      return {
+        text: `Attend ${formatHours(neededHrs)} more ${unit} to hit ${targetPercent}%`,
+        tone: "warn"
+      };
+    }
+
+    function escapeCsvValue(value) {
+      const str = String(value);
+      if (/[",\n\r]/.test(str)) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    }
+
+    function exportToCsv() {
+      if (entries.length === 0) return;
+      const headers = ["Date", "Subject", "Status", "Hours", "Note"];
+      const rows = entries.map((entry) => [
+        escapeCsvValue(entry.date),
+        escapeCsvValue(entry.subject),
+        escapeCsvValue(entry.status === "missed" ? "Missed" : "Attended"),
+        escapeCsvValue(formatHours(entry.hours)),
+        escapeCsvValue(entry.note || "")
+      ]);
+      const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `attendance_log_${getTodayDateString()}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      saveStatusTextEl.textContent = "CSV exported";
+      window.setTimeout(updateSaveStatus, 2200);
+    }
+
+    let feedbackTimer = null;
+    function showImportFeedback(message, tone) {
+      importFeedbackEl.textContent = message;
+      importFeedbackEl.className = `import-feedback ${tone}`;
+      if (feedbackTimer) window.clearTimeout(feedbackTimer);
+      feedbackTimer = window.setTimeout(function () {
+        importFeedbackEl.classList.add("hidden");
+      }, 4500);
+    }
+
+    function parseCsvLine(line) {
+      const cells = [];
+      let current = "";
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (inQuotes) {
+          if (ch === '"' && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            current += ch;
+          }
+        } else if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === ",") {
+          cells.push(current.trim());
+          current = "";
+        } else {
+          current += ch;
+        }
+      }
+      cells.push(current.trim());
+      return cells;
+    }
+
+    function importFromCsvText(text) {
+      const lines = text
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
+      if (lines.length === 0) {
+        showImportFeedback("That CSV file is empty.", "warn");
+        return;
+      }
+
+      const existingKeys = new Set(
+        entries.map(
+          (e) =>
+            `${e.date}|${e.subject.trim().toLowerCase()}|${e.status}|${formatHours(e.hours)}|${(e.note || "").trim().toLowerCase()}`
+        )
+      );
+
+      let added = 0;
+      let skippedDuplicates = 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const cols = parseCsvLine(lines[i]);
+        if (cols.length < 4) continue;
+
+        // Skip header row if present
+        if (i === 0 && cols[0].toLowerCase() === "date" && cols[1].toLowerCase() === "subject") {
+          continue;
+        }
+
+        const date = cols[0];
+        const subject = cols[1];
+        const statusRaw = cols[2].toLowerCase();
+        const hours = parseFloat(cols[3]);
+
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !parseLocalDate(date)) continue;
+        if (!subject) continue;
+        if (Number.isNaN(hours) || hours <= 0 || hours > 24) continue;
+
+        const status = statusRaw === "missed" ? "missed" : "attended";
+        const note = cols.length >= 5 ? cols[4].trim().slice(0, 140) : "";
+        const key = `${date}|${subject.toLowerCase()}|${status}|${formatHours(hours)}|${note.toLowerCase()}`;
+        if (existingKeys.has(key)) {
+          skippedDuplicates++;
+          continue;
+        }
+
+        existingKeys.add(key);
+        entries.push({
+          id: nextId++,
+          date: date,
+          subject: subject,
+          status: status,
+          hours: hours,
+          note: note
+        });
+        addSavedSubject(subject);
+        added++;
+      }
+
+      if (added === 0 && skippedDuplicates === 0) {
+        showImportFeedback("No valid attendance rows found. Expected: Date, Subject, Status, Hours.", "warn");
+        return;
+      }
+
+      if (added > 0) {
+        saveEntries();
+        render();
+      }
+
+      const parts = [];
+      if (added > 0) parts.push(`Imported ${added} ${added === 1 ? "entry" : "entries"}`);
+      if (skippedDuplicates > 0) {
+        parts.push(`${skippedDuplicates} ${skippedDuplicates === 1 ? "duplicate" : "duplicates"} skipped`);
+      }
+      showImportFeedback(`${parts.join(" · ")}.`, "ok");
+    }
+
+    function renderSavedSubjects() {
+      if (savedSubjects.length === 0) {
+        savedSubjectsWrap.innerHTML =
+          '<span class="saved-subjects-hint">Subjects you log or save appear here as one-tap buttons.</span>';
+        return;
+      }
+      const currentLower = subjectInput.value.trim().toLowerCase();
+      savedSubjectsWrap.innerHTML = savedSubjects
+        .map((subject, idx) => {
+          const isActive = currentLower && currentLower === subject.toLowerCase();
+          return `
+            <span class="subject-chip${isActive ? " active" : ""}">
+              <button type="button" class="subject-chip-pick" data-subject-index="${idx}">
+                ${escapeHtml(subject)}
+              </button>
+              <button
+                type="button"
+                class="subject-chip-remove"
+                data-remove-index="${idx}"
+                aria-label="Remove ${escapeHtml(subject)} from saved subjects"
+                title="Remove from saved subjects"
+              >&times;</button>
+            </span>
+          `;
+        })
+        .join("");
+    }
+
+    // 3. RENDER: Update the screen whenever entries, filter, or target goal change.
+    function render() {
+      renderSavedSubjects();
+
+      const attendedHours = entries
+        .filter((entry) => entry.status !== "missed")
+        .reduce((sum, entry) => sum + entry.hours, 0);
+      const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
+
+      totalHoursEl.textContent = formatHours(attendedHours);
+      totalSessionsEl.textContent = String(entries.length);
+
+      if (totalHours === 0) {
+        attendanceRateEl.textContent = "—";
+        rateStatusEl.textContent = "Log a class to calculate";
+        rateStatusEl.className = "stat-sub";
+      } else {
+        const overallPct = Math.round((attendedHours / totalHours) * 100);
+        const guidance = getGoalGuidance(attendedHours, totalHours);
+        attendanceRateEl.textContent = `${overallPct}%`;
+        rateStatusEl.textContent = guidance.text;
+        rateStatusEl.className = `stat-sub ${guidance.tone}`;
+      }
+
+      if (entries.length === 0) {
+        selectedFilter = "all";
+        subjectListEl.innerHTML = "";
+        subjectEmptyEl.style.display = "block";
+        periodListEl.innerHTML = "";
+        periodEmptyEl.style.display = "block";
+        entryListEl.innerHTML = "";
+        emptyStateEl.style.display = "block";
+        logToolbarEl.classList.add("hidden");
+        clearControlsEl.classList.add("hidden");
+        resetClearConfirmation();
+        return;
+      }
+
+      subjectEmptyEl.style.display = "none";
+      periodEmptyEl.style.display = "none";
+      emptyStateEl.style.display = "none";
+      logToolbarEl.classList.remove("hidden");
+      clearControlsEl.classList.remove("hidden");
+
+      // Render per-subject attendance percentage breakdown + goal helper
+      const subjectTotals = getSubjectTotals();
+      subjectListEl.innerHTML = subjectTotals
+        .map((item) => {
+          const pct = item.totalHours > 0 ? Math.round((item.attendedHours / item.totalHours) * 100) : 0;
+          const statusClass = pct >= targetPercent ? "ok" : "warn";
+          const hrsText = `${formatHours(item.attendedHours)} / ${formatHours(item.totalHours)} hrs`;
+          const guidance = getGoalGuidance(item.attendedHours, item.totalHours);
+          return `
+            <div class="subject-row">
+              <div class="subject-row-top">
+                <span class="subject-name">${escapeHtml(item.name)}</span>
+                <span class="subject-meta">
+                  ${hrsText} &middot; <span class="subject-pct ${statusClass}">${pct}%</span>
+                </span>
+              </div>
+              <div class="bar-track" aria-hidden="true">
+                <div class="bar-fill ${statusClass}" style="width: ${pct}%"></div>
+              </div>
+              <div class="subject-helper ${guidance.tone}">${escapeHtml(guidance.text)}</div>
+            </div>
+          `;
+        })
+        .join("");
+
+      // Render weekly or monthly timeline summary
+      const periodTotals = getPeriodTotals(summaryPeriod);
+      periodListEl.innerHTML = periodTotals
+        .map((item) => {
+          const pct = item.totalHours > 0 ? Math.round((item.attendedHours / item.totalHours) * 100) : 0;
+          const statusClass = pct >= targetPercent ? "ok" : "warn";
+          const hrsText = `${formatHours(item.attendedHours)} / ${formatHours(item.totalHours)} hrs`;
+          const sessLabel = item.sessions === 1 ? "1 session" : `${item.sessions} sessions`;
+          return `
+            <div class="subject-row">
+              <div class="subject-row-top">
+                <span class="subject-name">${escapeHtml(item.label)}</span>
+                <span class="subject-meta">
+                  ${hrsText} &middot; ${sessLabel} &middot; <span class="subject-pct ${statusClass}">${pct}%</span>
+                </span>
+              </div>
+              <div class="bar-track" aria-hidden="true">
+                <div class="bar-fill ${statusClass}" style="width: ${pct}%"></div>
+              </div>
+            </div>
+          `;
+        })
+        .join("");
+
+      // Sync subject filter dropdown options
+      const validKeys = new Set(subjectTotals.map((item) => item.name.toLowerCase()));
+      if (selectedFilter !== "all" && !validKeys.has(selectedFilter)) {
+        selectedFilter = "all";
+      }
+      subjectFilterEl.innerHTML =
+        `<option value="all">All Subjects (${entries.length})</option>` +
+        subjectTotals
+          .map((item) => {
+            const key = item.name.toLowerCase();
+            const isSelected = selectedFilter === key ? " selected" : "";
+            return `<option value="${escapeHtml(key)}"${isSelected}>${escapeHtml(item.name)} (${item.sessions})</option>`;
+          })
+          .join("");
+
+      // Filter and sort attendance log chronologically (newest date first)
+      const visibleEntries = (
+        selectedFilter === "all"
+          ? [...entries]
+          : entries.filter((entry) => entry.subject.trim().toLowerCase() === selectedFilter)
+      ).sort((a, b) => {
+        const dateCmp = b.date.localeCompare(a.date);
+        return dateCmp !== 0 ? dateCmp : b.id - a.id;
+      });
+
+      entryListEl.innerHTML = visibleEntries
+        .map((entry) => {
+          if (entry.id === editingId) {
+            return `
+              <li class="entry-item editing" data-edit-id="${entry.id}">
+                <div class="edit-grid">
+                  <div class="edit-field full">
+                    <label>Class or Subject</label>
+                    <input type="text" class="edit-subject-input" value="${escapeHtml(entry.subject)}" />
+                  </div>
+                  <div class="edit-field">
+                    <label>Date (any past date)</label>
+                    <input type="date" class="edit-date-input" value="${escapeHtml(entry.date)}" />
+                  </div>
+                  <div class="edit-field">
+                    <label>Class Hours</label>
+                    <input type="number" class="edit-hours-input" min="0.25" max="24" step="0.25" value="${formatHours(entry.hours)}" />
+                  </div>
+                  <div class="edit-field full">
+                    <label>Status</label>
+                    <select class="edit-status-input">
+                      <option value="attended"${entry.status !== "missed" ? " selected" : ""}>Attended</option>
+                      <option value="missed"${entry.status === "missed" ? " selected" : ""}>Missed</option>
+                    </select>
+                  </div>
+                  <div class="edit-field full">
+                    <label>Note (optional)</label>
+                    <input type="text" class="edit-note-input" maxlength="140" placeholder="Optional note" value="${escapeHtml(entry.note || "")}" />
+                  </div>
+                </div>
+                <div class="edit-footer">
+                  <span class="edit-error" role="alert"></span>
+                  <div class="edit-buttons">
+                    <button type="button" class="ghost-btn cancel-edit-btn">Cancel</button>
+                    <button type="button" class="save-edit-btn" data-id="${entry.id}">Save Changes</button>
+                  </div>
+                </div>
+              </li>
+            `;
+          }
+
+          const hrsLabel = entry.hours === 1 ? "1 hr" : `${formatHours(entry.hours)} hrs`;
+          const isMissed = entry.status === "missed";
+          const pillClass = isMissed ? "hours-pill missed" : "hours-pill";
+          const statusLabel = isMissed ? "Missed" : "Attended";
+          return `
+            <li class="entry-item">
+              <div class="entry-info">
+                <span class="entry-subject">${escapeHtml(entry.subject)}</span>
+                <span class="entry-date">${escapeHtml(formatDate(entry.date))}</span>
+                ${entry.note ? `<span class="entry-note">${escapeHtml(entry.note)}</span>` : ""}
+              </div>
+              <div class="entry-actions">
+                <span class="${pillClass}">${hrsLabel} &middot; ${statusLabel}</span>
+                <button type="button" class="edit-btn" data-id="${entry.id}">Edit</button>
+                <button type="button" class="remove-btn" data-id="${entry.id}">Remove</button>
+              </div>
+            </li>
+          `;
+        })
+        .join("");
+    }
+
+    // 4. EVENTS: Listen for form submissions, remove clicks, and clear-all actions.
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      clearError();
+
+      const subject = subjectInput.value.trim();
+      const hours = parseFloat(hoursInput.value);
+      const date = dateInput.value;
+      const note = noteInput.value.trim();
+
+      if (!subject) {
+        showError("Please enter a class or subject name.");
+        subjectInput.focus();
+        return;
+      }
+
+      if (Number.isNaN(hours) || hours <= 0 || hours > 24) {
+        showError("Please enter valid hours between 0.25 and 24.");
+        hoursInput.focus();
+        return;
+      }
+
+      if (!date) {
+        showError("Please select a date.");
+        dateInput.focus();
+        return;
+      }
+
+      // Add the new entry to the top of the list and save to localStorage.
+      entries.unshift({
+        id: nextId++,
+        subject: subject,
+        hours: hours,
+        date: date,
+        status: selectedStatus,
+        note: note
+      });
+      addSavedSubject(subject);
+      saveEntries();
+
+      // Reset inputs for the next entry, keeping the date filled in.
+      subjectInput.value = "";
+      hoursInput.value = "";
+      noteInput.value = "";
+      subjectInput.focus();
+
+      render();
+    });
+
+    entryListEl.addEventListener("click", function (event) {
+      const removeBtn = event.target.closest(".remove-btn");
+      if (removeBtn) {
+        const idToRemove = Number(removeBtn.dataset.id);
+        const index = entries.findIndex((entry) => entry.id === idToRemove);
+        if (index !== -1) {
+          entries.splice(index, 1);
+          if (editingId === idToRemove) editingId = null;
+          saveEntries();
+          render();
+        }
+        return;
+      }
+
+      const editBtn = event.target.closest(".edit-btn");
+      if (editBtn) {
+        editingId = Number(editBtn.dataset.id);
+        render();
+        return;
+      }
+
+      const cancelEditBtn = event.target.closest(".cancel-edit-btn");
+      if (cancelEditBtn) {
+        editingId = null;
+        render();
+        return;
+      }
+
+      const saveEditBtn = event.target.closest(".save-edit-btn");
+      if (saveEditBtn) {
+        const idToSave = Number(saveEditBtn.dataset.id);
+        const row = saveEditBtn.closest(".entry-item");
+        if (!row) return;
+
+        const newSubject = row.querySelector(".edit-subject-input").value.trim();
+        const newDate = row.querySelector(".edit-date-input").value;
+        const newHours = parseFloat(row.querySelector(".edit-hours-input").value);
+        const newStatus = row.querySelector(".edit-status-input").value === "missed" ? "missed" : "attended";
+        const newNote = row.querySelector(".edit-note-input").value.trim().slice(0, 140);
+        const errorEl = row.querySelector(".edit-error");
+
+        if (!newSubject) {
+          errorEl.textContent = "Enter a subject name.";
+          return;
+        }
+        if (!newDate) {
+          errorEl.textContent = "Select a valid date.";
+          return;
+        }
+        if (Number.isNaN(newHours) || newHours <= 0 || newHours > 24) {
+          errorEl.textContent = "Hours must be between 0.25 and 24.";
+          return;
+        }
+
+        const entry = entries.find((item) => item.id === idToSave);
+        if (entry) {
+          entry.subject = newSubject;
+          entry.date = newDate;
+          entry.hours = newHours;
+          entry.status = newStatus;
+          entry.note = newNote;
+          editingId = null;
+          saveEntries();
+          render();
+        }
+      }
+    });
+
+    clearAllBtn.addEventListener("click", function () {
+      clearAllBtn.classList.add("hidden");
+      confirmClearBtn.classList.remove("hidden");
+      cancelClearBtn.classList.remove("hidden");
+    });
+
+    cancelClearBtn.addEventListener("click", function () {
+      resetClearConfirmation();
+    });
+
+    confirmClearBtn.addEventListener("click", function () {
+      entries = [];
+      editingId = null;
+      saveEntries();
+      resetClearConfirmation();
+      render();
+    });
+
+    statusAttendedBtn.addEventListener("click", function () {
+      setSelectedStatus("attended");
+    });
+
+    statusMissedBtn.addEventListener("click", function () {
+      setSelectedStatus("missed");
+    });
+
+    goalInput.addEventListener("input", function () {
+      const value = Number(goalInput.value);
+      if (!Number.isNaN(value) && value >= 1 && value <= 100) {
+        targetPercent = Math.round(value);
+        saveGoal();
+        render();
+      }
+    });
+
+    subjectFilterEl.addEventListener("change", function () {
+      selectedFilter = subjectFilterEl.value;
+      render();
+    });
+
+    exportCsvBtn.addEventListener("click", function () {
+      exportToCsv();
+    });
+
+    importCsvBtn.addEventListener("click", function () {
+      importCsvInput.click();
+    });
+
+    importCsvInput.addEventListener("change", function (event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (loadEvent) {
+        const content = typeof loadEvent.target.result === "string" ? loadEvent.target.result : "";
+        importFromCsvText(content);
+      };
+      reader.onerror = function () {
+        showImportFeedback("Could not read that file. Please try again.", "warn");
+      };
+      reader.readAsText(file);
+      importCsvInput.value = "";
+    });
+
+    themeToggleBtn.addEventListener("click", function () {
+      applyTheme(currentTheme === "dark" ? "light" : "dark");
+    });
+
+    periodWeekBtn.addEventListener("click", function () {
+      setSummaryPeriod("week");
+    });
+
+    periodMonthBtn.addEventListener("click", function () {
+      setSummaryPeriod("month");
+    });
+
+    dateShortcutButtons.forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        const daysAgo = Number(btn.dataset.daysAgo) || 0;
+        dateInput.value = getDateStringDaysAgo(daysAgo);
+        dateInput.focus();
+      });
+    });
+
+    saveSubjectBtn.addEventListener("click", function () {
+      clearError();
+      const name = subjectInput.value.trim();
+      if (!name) {
+        showError("Type a subject name first, then click + Save.");
+        subjectInput.focus();
+        return;
+      }
+      addSavedSubject(name);
+      renderSavedSubjects();
+      hoursInput.focus();
+    });
+
+    subjectInput.addEventListener("input", function () {
+      renderSavedSubjects();
+    });
+
+    savedSubjectsWrap.addEventListener("click", function (event) {
+      const pickBtn = event.target.closest(".subject-chip-pick");
+      if (pickBtn) {
+        const idx = Number(pickBtn.dataset.subjectIndex);
+        if (savedSubjects[idx]) {
+          subjectInput.value = savedSubjects[idx];
+          clearError();
+          renderSavedSubjects();
+          hoursInput.focus();
+        }
+        return;
+      }
+
+      const removeBtn = event.target.closest(".subject-chip-remove");
+      if (removeBtn) {
+        const idx = Number(removeBtn.dataset.removeIndex);
+        if (!Number.isNaN(idx) && idx >= 0 && idx < savedSubjects.length) {
+          savedSubjects.splice(idx, 1);
+          saveSubjects();
+          renderSavedSubjects();
+        }
+      }
+    });
+
+    // Load any previously saved entries, goal, and theme, then draw the screen on startup.
+    loadEntries();
+    goalInput.value = String(targetPercent);
+    applyTheme(currentTheme);
+    updateSaveStatus();
+    render();
+  </script>
+</body>
+</html>
